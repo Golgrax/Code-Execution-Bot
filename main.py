@@ -73,11 +73,6 @@ def execute_python_code(code):
         return traceback.format_exc()
 
 
-
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user.name}")
-
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -87,38 +82,26 @@ async def on_message(message):
         # Extract the code from the message
         code = message.content.replace('!code ', '').strip()
 
-    # Determine the programming language based on the first line of the code
-    language = None
-    first_line = code.split('\n')[0].strip().lower()
-    if first_line.startswith('#!python'):
-        language = 'python'
-    elif first_line.startswith('//'):
-        language = 'javascript'
-    elif first_line.startswith('<html') or first_line.startswith('<!doctype html'):
-        language = 'html'
-    elif first_line.startswith('<style') or first_line.startswith('body {') or first_line.startswith('html {'):
-        language = 'css'
-    elif first_line.startswith('import') or first_line.startswith('public class') or first_line.startswith('class'):
-        language = 'java'
-    elif first_line.startswith('#!ruby'):
-        language = 'ruby'
+        # Determine the programming language based on the first line of the code
+        language = None
+        first_line = code.split('\n')[0].strip().lower()
+        if first_line.startswith('#!python'):
+            language = 'python'
+        elif first_line.startswith('//'):
+            language = 'javascript'
+        elif first_line.startswith('<html') or first_line.startswith('<!doctype html'):
+            language = 'html'
+        elif first_line.startswith('<style') or first_line.startswith('body {') or first_line.startswith('html {'):
+            language = 'css'
+        elif first_line.startswith('import') or first_line.startswith('public class') or first_line.startswith('class'):
+            language = 'java'
+        elif first_line.startswith('#!ruby'):
+            language = 'ruby'
 
-    # If the language is supported, execute or beautify the code
-    if language is None:
-        await message.channel.send('Invalid language. Please enter one of the following languages: python, javascript, html, css, java, ruby')
-    elif language == 'python':
-        # Execute the code and send the output back to the user
-        output = execute_python_code(code)
-        await message.channel.send(f'```{output}```')
-    else:
-        # Beautify and highlight the code and send it back to the user
-        formatted_code = format_code(code, language)
-        await message.channel.send(f'```{formatted_code}```')
-
-        code = message.content[6:].strip()
-        language = code.split("\n")[0].strip()
-
-        if language == "python":
+        # If the language is supported, execute or beautify the code
+        if language is None:
+            await message.channel.send('Invalid language. Please enter one of the following languages: python, javascript, html, css, java, ruby')
+        elif language == "python":
             # Redirect output to buffer
             with io.StringIO() as buf, redirect_stdout(buf):
                 try:
