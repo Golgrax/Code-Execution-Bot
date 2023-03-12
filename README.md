@@ -1,5 +1,5 @@
 # Code Execution Bot
-Coded for Discord Bot that allows users to execute and beautify code in Python, JavaScript, HTML, CSS, Java, and Ruby.
+Coded for Discord Bot that allows users to execute and beautify code in Python, JavaScript, HTML, CSS, Java, Go, and Ruby.
 
 
 This bot listens for messages in Discord. If a message starts with `!code`, it extracts the code from the message. It determines the programming language of the code based on the first line of the code. Depending on the language, the bot will either execute the code or beautify and highlight it before sending it back to the user.
@@ -10,6 +10,7 @@ This bot listens for messages in Discord. If a message starts with `!code`, it e
 - JavaScript
 - HTML/CSS
 - Java
+- Go
 - Ruby
 
 ## Usage
