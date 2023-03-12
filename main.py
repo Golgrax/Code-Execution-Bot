@@ -30,6 +30,21 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 intents = discord.Intents.default()
 intents.members = True
+intents.messages = True
+intents.reactions = True
+intents.guilds = True
+intents.presences = True
+intents.voice_states = True
+intents.typing = True
+intents.invites = True
+intents.webhooks = True
+intents.integrations = True
+intents.dm_messages = True
+intents.dm_reactions = True
+intents.dm_typing = True
+intents.message_content = True # Add this line to enable message_content intent
+
+client = discord.Client(intents=intents)
 bot = discord.Client(intents=intents)
 
 @bot.event
