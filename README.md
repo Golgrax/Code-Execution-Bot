@@ -1,5 +1,5 @@
 # Code Execution Bot
-Coded for Discord Bot that allows users to execute and beautify code in Python, JavaScript, HTML, CSS, Java, Go, and Ruby.
+Coded for Discord Bot that allows users to execute and beautify code in Python, JavaScript, HTML, CSS, Java, and Ruby.
 
 
 This bot listens for messages in Discord. If a message starts with `!code`, it extracts the code from the message. It determines the programming language of the code based on the first line of the code. Depending on the language, the bot will either execute the code or beautify and highlight it before sending it back to the user.
@@ -10,7 +10,6 @@ This bot listens for messages in Discord. If a message starts with `!code`, it e
 - JavaScript
 - HTML/CSS
 - Java
-- Go
 - Ruby
 
 ## Usage
@@ -45,12 +44,23 @@ The following configuration variables can be set in the `.env` file:
 - `CLIENT_ID`: Your JDoodle API client ID (for Java and Ruby).
 - `CLIENT_SECRET`: Your JDoodle API client secret (for Java and Ruby).
 
+
+## Commands
+
+- `#!python` used for the Python Language
+- `//` used for the Javascript Language
+- `<html` used for the HTML Language
+- `<style` used for the CSS Language
+- `import` used for the Java Language
+- `!ruby` used for the Ruby Language
+
+
 ## Examples
 
-- `!code print("Hello, World!")` - Executes a Python code and prints "Hello, World!" to the console.
-- `!code console.log("Hello, World!")` - Evaluates a JavaScript code and logs "Hello, World!" to the console.
-- `!code <html><head><title>Test</title></head><body><h1>Hello, World!</h1></body></html>` - Beautifies and highlights an HTML code.
-- `!code public class Main {public static void main(String[] args) {System.out.println("Hello, World!");}}` - Compiles a Java code and prints "Hello, World!" to the console.
+- `!code #!python print("Hello, World!")` - Executes a Python code and prints "Hello, World!" to the console.
+- `!code // console.log("Hello, World!")` - Evaluates a JavaScript code and logs "Hello, World!" to the console.
+- `!code <html <html><head><title>Test</title></head><body><h1>Hello, World!</h1></body></html>` - Beautifies and highlights an HTML code.
+- `!code import public class Main {public static void main(String[] args) {System.out.println("Hello, World!");}}` - Compiles a Java code and prints "Hello, World!" to the console.
 
 ## License
 
