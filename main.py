@@ -13,8 +13,10 @@ import pygments.formatters
 import pygments.lexers
 import requests
 import os
+
 from dotenv import load_dotenv
 from keep_alive import keep_alive
+
 
 
 load_dotenv()
@@ -47,6 +49,31 @@ intents.message_content = True # Add this line to enable message_content intent
 client = discord.Client(intents=intents)
 bot = discord.Client(intents=intents)
 
+
+def format_code(code, language):
+    if language == 'javascript':
+        return jsbeautifier.beautify(code)
+    else:
+        return code
+
+
+def execute_python_code(code):
+    try:
+        # Redirect the standard output to a buffer so we can capture the output
+        stdout_buffer = io.StringIO()
+        with redirect_stdout(stdout_buffer):
+            # Execute the code in a new namespace
+            exec(code, {})
+
+        # Return the output as a string
+        return stdout_buffer.getvalue().strip()
+
+    except:
+        # If there was an error, print the traceback
+        return traceback.format_exc()
+
+
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
@@ -56,10 +83,9 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    
     if message.content.startswith('!code'):
-    # Extract the code from the message
-    code = message.content.replace('!code ', '').strip()
+        # Extract the code from the message
+        code = message.content.replace('!code ', '').strip()
 
     # Determine the programming language based on the first line of the code
     language = None
@@ -88,8 +114,6 @@ async def on_message(message):
         # Beautify and highlight the code and send it back to the user
         formatted_code = format_code(code, language)
         await message.channel.send(f'```{formatted_code}```')
-
-
 
         code = message.content[6:].strip()
         language = code.split("\n")[0].strip()
