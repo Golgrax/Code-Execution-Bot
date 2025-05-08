@@ -1,153 +1,237 @@
 import discord
-import io
-import traceback
-import re
-import requests
 import os
-import jsbeautifier
-import js2py
-from contextlib import redirect_stdout
-from dotenv import load_dotenv
-from keep_alive import keep_alive
+import requests
+import json
+from bs4 import BeautifulSoup
+import re
+import asyncio
 
-load_dotenv()
-
-# Environment variables
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-CLIENT_ID = os.getenv("CLIENT_ID")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-# Discord intents
+# Set up Discord intents
 intents = discord.Intents.default()
 intents.message_content = True
-bot = discord.Client(intents=intents)
+client = discord.Client(intents=intents)
 
-# Send output, handling large content
-async def send_output(message, output, language):
-    if len(output) > 1900:  # Discord limit ~2000 chars
-        with io.StringIO(output) as f:
-            await message.channel.send(file=discord.File(f, f"output.{language}"))
-    else:
-        await message.channel.send(f"Output:\n```{language}\n{output}\n```")
-
-# Execute code via JDoodle API
-async def execute_jdoodle(language, code):
-    url = "https://api.jdoodle.com/v1/execute"
-    data = {
-        "clientId": CLIENT_ID,
-        "clientSecret": CLIENT_SECRET,
-        "script": code,
-        "language": language,
-        "versionIndex": "0"
-    }
-    try:
-        response = requests.post(url, json=data)
-        response_data = response.json()
-        if response_data['statusCode'] == 200:
-            return response_data['output']
-        else:
-            return f"Error: {response_data.get('message', 'Unknown error')}"
-    except Exception as e:
-        return f"JDoodle API Error: {str(e)}"
-
-# Language handlers
-async def handle_python(message, code):
-    try:
-        with io.StringIO() as buf, redirect_stdout(buf):
-            exec(code)
-            output = buf.getvalue().strip()
-        if output:
-            await send_output(message, output, 'python')
-        else:
-            await message.channel.send("No output.")
-    except SyntaxError as e:
-        await message.channel.send(f"Syntax Error: {e}\nSuggestion: Check for typos or incorrect syntax.")
-    except NameError as e:
-        await message.channel.send(f"Name Error: {e}\nSuggestion: Ensure all variables are defined.")
-    except Exception as e:
-        await message.channel.send(f"Error:\n```{traceback.format_exc()}```")
-
-async def handle_javascript(message, code):
-    try:
-        result = js2py.eval_js(code)
-        await send_output(message, str(result), 'javascript')
-    except Exception as e:
-        await message.channel.send(f"Error:\n```{traceback.format_exc()}```")
-
-async def handle_html(message, code):
-    try:
-        beautified = jsbeautifier.beautify(code, {"indent_size": 2})
-        await send_output(message, beautified, 'html')
-    except Exception as e:
-        await message.channel.send(f"Error:\n```{traceback.format_exc()}```")
-
-async def handle_css(message, code):
-    try:
-        beautified = jsbeautifier.beautify(code, {"indent_size": 2})
-        await send_output(message, beautified, 'css')
-    except Exception as e:
-        await message.channel.send(f"Error:\n```{traceback.format_exc()}```")
-
-async def handle_java(message, code):
-    output = await execute_jdoodle('java', code)
-    await send_output(message, output, 'java')
-
-async def handle_ruby(message, code):
-    output = await execute_jdoodle('ruby', code)
-    await send_output(message, output, 'ruby')
-
-async def handle_go(message, code):
-    output = await execute_jdoodle('go', code)
-    await send_output(message, output, 'go')
-
-# Handler mapping
-handlers = {
-    'python': handle_python,
-    'javascript': handle_javascript,
-    'html': handle_html,
-    'css': handle_css,
-    'java': handle_java,
-    'ruby': handle_ruby,
-    'go': handle_go,
+# Expanded mapping of languages to Judge0 language IDs
+LANGUAGE_IDS = {
+    'python': 71,     # Python 3
+    'javascript': 63, # Node.js
+    'java': 62,       # Java 11
+    'c': 50,          # C (GCC 9.2.0)
+    'cpp': 54,        # C++ (GCC 9.2.0)
+    'csharp': 51,     # C# (.NET Core 3.1.0)
+    'php': 68,        # PHP 7.4.1
+    'ruby': 72,       # Ruby 2.7.0
+    'rust': 73,       # Rust 1.40.0
+    'go': 60,         # Go 1.13.5
+    'kotlin': 78,     # Kotlin 1.3.70
+    'swift': 83,      # Swift 5.2.3
 }
 
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
+# Judge0 API configuration
+JUDGE0_BASE_URL = "https://judge0-ce.p.rapidapi.com"  # RapidAPI endpoint
+JUDGE0_API_KEY = os.getenv('JUDGE0_API_KEY')  # Store your RapidAPI key as an environment variable
 
-    if message.content.startswith('!code'):
-        content = message.content[5:].strip()
-        if content == 'help':
-            help_message = """
-            **Usage**: `!code`
-            ```
-            language
-            your code here
-            ```
-            **Supported languages**: python, javascript, html, css, java, ruby, go
-            **Example**:
-            ```
-            !code
-            ```python
-            print("Hello, World!")
-            ```
-            ```
-            """
-            await message.channel.send(help_message)
-            return
+def extract_code_blocks(content):
+    """Extract code from Discord markdown code blocks."""
+    # Match code blocks with or without language specification
+    code_block_pattern = r"```(?:(\w+)\n)?([\s\S]+?)```"
+    matches = re.findall(code_block_pattern, content)
+    
+    if matches:
+        language, code = matches[0]
+        language = language.lower() if language else "python"  # Default to Python if no language specified
+        return language, code.strip()
+    
+    # If no code block found, try to extract code after language
+    parts = content.split(' ', 2)
+    if len(parts) >= 3:
+        return parts[1].lower(), parts[2].strip()
+    
+    return None, None
 
-        match = re.search(r'```(\w+)\n([\s\S]*?)\n```', content)
-        if match:
-            language = match.group(1).lower()
-            code = match.group(2)
-            if language in handlers:
-                await handlers[language](message, code)
-            else:
-                await message.channel.send("Unsupported language. Use `!code help` for supported languages.")
+def format_html(code):
+    """Format and beautify HTML code."""
+    try:
+        soup = BeautifulSoup(code, 'html.parser')
+        return soup.prettify()
+    except Exception as e:
+        return f"HTML formatting error: {str(e)}"
+
+async def execute_code(language, code, stdin=""):
+    """Execute code using Judge0 API and return the output."""
+    if language not in LANGUAGE_IDS:
+        return f'Unsupported language: {language}. Supported languages: {", ".join(LANGUAGE_IDS.keys())}'
+    
+    language_id = LANGUAGE_IDS[language]
+    
+    # Set up headers with API key
+    headers = {
+        "Content-Type": "application/json",
+        "X-RapidAPI-Key": JUDGE0_API_KEY,
+        "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com"
+    }
+    
+    # Prepare data for submission
+    data = {
+        "source_code": code,
+        "language_id": language_id,
+        "stdin": stdin,
+        "cpu_time_limit": 5,  # 5 seconds time limit
+        "memory_limit": 128000  # 128MB memory limit
+    }
+    
+    try:
+        # Create submission
+        response = requests.post(
+            f"{JUDGE0_BASE_URL}/submissions",
+            headers=headers,
+            json=data
+        )
+        
+        if response.status_code != 201:
+            return f"Error creating submission: {response.text}"
+        
+        # Get submission token
+        token = response.json()["token"]
+        
+        # Poll for results (with timeout)
+        max_tries = 10
+        for _ in range(max_tries):
+            await asyncio.sleep(1)  # Wait between polling attempts
+            
+            response = requests.get(
+                f"{JUDGE0_BASE_URL}/submissions/{token}",
+                headers=headers
+            )
+            
+            if response.status_code != 200:
+                return f"Error getting results: {response.text}"
+            
+            result = response.json()
+            
+            # Check if processing is complete
+            if result["status"]["id"] not in [1, 2]:  # Not in queue or processing
+                break
+        
+        # Process results
+        status_id = result["status"]["id"]
+        
+        output = ""
+        if "stdout" in result and result["stdout"]:
+            output += result["stdout"]
+        
+        if status_id == 3:  # Accepted
+            return output or "Code executed successfully (no output)"
+        elif status_id == 4:  # Wrong Answer
+            return output or "Code executed but produced wrong answer"
+        elif status_id == 5:  # Time Limit Exceeded
+            return "Execution time limit exceeded"
+        elif status_id == 6:  # Compilation Error
+            return f"Compilation Error:\n{result.get('compile_output', 'No details available')}"
+        elif status_id == 7:  # Runtime Error (SIGSEGV)
+            return f"Runtime Error (SIGSEGV):\n{result.get('stderr', 'No details available')}"
+        elif status_id == 8:  # Runtime Error (SIGXFSZ)
+            return "Runtime Error: File size limit exceeded"
+        elif status_id == 9:  # Runtime Error (SIGFPE)
+            return "Runtime Error: Floating point error"
+        elif status_id == 10:  # Runtime Error (SIGABRT)
+            return "Runtime Error: Aborted"
+        elif status_id == 11:  # Runtime Error (NZEC)
+            return "Runtime Error: Non-zero exit code"
+        elif status_id == 12:  # Runtime Error (Other)
+            return f"Runtime Error:\n{result.get('stderr', 'No details available')}"
+        elif status_id == 13:  # Internal Error
+            return "Judge0 Internal Error"
+        elif status_id == 14:  # Exec Format Error
+            return "Execution Format Error"
         else:
-            await message.channel.send("Please provide a code block with the language specified. See `!code help`.")
+            return f"Unknown status (ID: {status_id}):\n{result.get('stderr', 'No details available')}"
+            
+    except Exception as e:
+        return f"Error executing code: {str(e)}"
 
-# Warning: Python and JavaScript execute locally; use a sandboxed environment for safety
-keep_alive()
-bot.run(BOT_TOKEN)
+@client.event
+async def on_ready():
+    """Log when the bot is ready."""
+    print(f'Bot is online as {client.user}')
+    activity = discord.Activity(type=discord.ActivityType.watching, name="for !code commands")
+    await client.change_presence(activity=activity)
+
+@client.event
+async def on_message(message):
+    """Handle incoming messages."""
+    if message.author == client.user:
+        return
+    
+    # Process !code command
+    if message.content.startswith('!code'):
+        # Send typing indicator to show the bot is processing
+        async with message.channel.typing():
+            # Extract language and code
+            content = message.content[len('!code'):].strip()
+            
+            # First try to extract from code blocks
+            language, code = extract_code_blocks(content)
+            
+            # If extraction fails, show usage instructions
+            if not language or not code:
+                await message.channel.send(
+                    "Usage: !code [language] [code]\n"
+                    "Or use code blocks:\n"
+                    "!code ```language\nyour code here\n```\n\n"
+                    f"Supported languages: {', '.join(LANGUAGE_IDS.keys())}"
+                )
+                return
+            
+            # Process based on language
+            if language in LANGUAGE_IDS:
+                # Let user know we're processing
+                processing_msg = await message.channel.send("Processing code, please wait...")
+                
+                # Execute code
+                output = await execute_code(language, code)
+                
+                # Format and send response
+                if len(output) > 1900:  # Discord message limit is 2000, leave buffer
+                    output = output[:1900] + '\n... (truncated)'
+                
+                await processing_msg.delete()
+                await message.channel.send(f'Output:\n```\n{output}\n```')
+            
+            elif language == 'html':
+                formatted_html = format_html(code)
+                if len(formatted_html) > 1900:
+                    formatted_html = formatted_html[:1900] + '\n... (truncated)'
+                await message.channel.send(f'Formatted HTML:\n```html\n{formatted_html}\n```')
+            
+            else:
+                await message.channel.send(
+                    f'Unsupported language: {language}\n'
+                    f'Supported languages: {", ".join(LANGUAGE_IDS.keys())}'
+                )
+
+    # Process !help command
+    elif message.content.startswith('!help'):
+        help_text = (
+            "**Code Execution Bot Commands:**\n\n"
+            "`!code [language] [code]` - Execute code in the specified language\n"
+            "`!code ```language\ncode\n```` - Execute code in a code block\n\n"
+            f"**Supported Languages:** {', '.join(LANGUAGE_IDS.keys())}, html\n\n"
+            "**Examples:**\n"
+            "`!code python print('Hello, World!')`\n"
+            "Or using code blocks:\n"
+            "```\n!code ```python\nprint('Hello, World!')\n```\n```"
+        )
+        await message.channel.send(help_text)
+
+print(os.getenv("JUDGE0_API_KEY"))
+
+# Run the bot with the token from environment variable
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_TOKEN')
+    if not token:
+        print("Error: DISCORD_TOKEN environment variable not set")
+    else:
+        client.run(token)
+
+
