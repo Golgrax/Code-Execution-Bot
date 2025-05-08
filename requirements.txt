@@ -1,5 +1,2 @@
 discord.py
-requests
-jsbeautifier
-js2py
 python-dotenv
