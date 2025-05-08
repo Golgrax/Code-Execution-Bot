@@ -60,14 +60,14 @@ python main.py
 
 In any channel the bot has access to, type `!code` followed by your code snippet. Use one of the supported patterns:
 
-| Language   | Trigger Syntax                           |
-| ---------- | ---------------------------------------- |
-| Python     | `!code python print("Hello!")`           |
-| JavaScript | `!code javascript console.log("Hello!")` |
-| HTML       | `!code html <h1>Hello!</h1>`             |
-| CSS        | `!code css body { color: red; }`         |
-| Java       | `!code java public class Main { ... }`   |
-| Ruby       | `!code ruby puts "Hello!"`               |
+| Language   | Trigger Syntax                                      |
+| ---------- | --------------------------------------------------- |
+| Python     | `!code <whatever> python print("Hello!")`           |
+| JavaScript | `!code <whatever> javascript console.log("Hello!")` |
+| HTML       | `!code <whatever> html <h1>Hello!</h1>`             |
+| CSS        | `!code <whatever> css body { color: red; }`         |
+| Java       | `!code <whatever> java public class Main { ... }`   |
+| Ruby       | `!code <whatever> ruby puts "Hello!"`               |
 
 Or wrap your code in a fenced code block:
 
@@ -80,32 +80,32 @@ print("Hello, World!")
 * **Python**:
 
   ```bash
-  !code python print("Hello, World!")
+  !code <whatever> python print("Hello, World!")
   ```
 * **JavaScript**:
 
   ```bash
-  !code javascript console.log("Hello, World!")
+  !code <whatever> javascript console.log("Hello, World!")
   ```
 * **HTML**:
 
   ```bash
-  !code html <h1>Hello, World!</h1>
+  !code <whatever> html <h1>Hello, World!</h1>
   ```
 * **CSS**:
 
   ```bash
-  !code css body { font-size: 16px; }
+  !code <whatever> css body { font-size: 16px; }
   ```
 * **Java**:
 
   ```bash
-  !code java public class Main { public static void main(String[] args) { System.out.println("Hello, World!"); } }
+  !code <whatever> java public class Main { public static void main(String[] args) { System.out.println("Hello, World!"); } }
   ```
 * **Ruby**:
 
   ```bash
-  !code ruby puts "Hello, World!"
+  !code <whatever> ruby puts "Hello, World!"
   ```
 
 ## Commands Summary
