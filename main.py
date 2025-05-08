@@ -224,7 +224,7 @@ async def on_message(message):
         )
         await message.channel.send(help_text)
 
-print(os.getenv("JUDGE0_API_KEY"))
+
 
 # Run the bot with the token from environment variable
 if __name__ == "__main__":
