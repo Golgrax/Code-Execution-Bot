@@ -27,7 +27,7 @@ This bot listens for messages in Discord. When a message starts with `!code`, it
    ```bash
    git clone https://github.com/Golgrax/Code-Execution-Bot.git
    cd Code-Execution-Bot
-````
+```
 
 2. **Create and activate a virtual environment** (optional but recommended)
 
